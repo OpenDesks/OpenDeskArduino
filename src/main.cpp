@@ -3,15 +3,30 @@
 #include <Stepper.h>
 #include <stdlib.h>
 #include <string.h>
-
-using namespace std;
+// using namespace std;
 // Define number of steps per revolution:
 const int StepX = 2;
 const int DirX = 5;
 
 const int stepsPerRevolution = 200;
 const int revsPerInch = 1;
+void spinForSteps(int steps)
+{
+  digitalWrite(DirX, LOW);
 
+  for (int x = 0; x < steps; x++)
+  {
+    digitalWrite(StepX, HIGH);
+    delayMicroseconds(500);
+    digitalWrite(StepX, LOW);
+    delayMicroseconds(500);
+  }
+}
+void spinForRotation(int rotations)
+{
+  int steps = rotations * stepsPerRevolution;
+  spinForSteps(steps);
+}
 void spinForDist(double inches, bool dir)
 {
   if (dir)
@@ -44,38 +59,16 @@ void loop()
   if (Serial.available())
   {
     String data = Serial.readStringUntil('\n');
-    data.trim(); // Remove leading/trailing whitespace
-
-    if (data.length() > 0)
+    const char *foundCalibrationData = strstr(data.c_str(), "calibration");
+    const char *foundIsCalibrating = strstr(data.c_str(), "desk/activeCalibration/status:true");
+    if (foundCalibrationData)
     {
-      // Process the received data here
       Serial.println("Received data: " + data);
-
-      // Remove quotes from the string
-      if (data.startsWith("\"") && data.endsWith("\""))
-      {
-        data = data.substring(1, data.length() - 1);
-      }
-
-      // Convert the string to a double
-      double inches = data.toDouble();
-
-      if (inches != 0.0)
-      {
-        // Print the converted value
-        Serial.print("Inches: ");
-        Serial.println(inches);
-
-        // Perform the desired action using the converted value
-        spinForDist(inches, true);
-      }
-      else
-      {
-        Serial.println("Invalid input. Please provide a valid number.");
-      }
+    }
+    else if (foundIsCalibrating)
+    {
+      spinForRotation(10);
+      Serial.println("desk/activeCalibration/status:false");
     }
   }
-
-  // Serial.println(Serial.readString());
-  delay(1000); // delay for 1 second
 }
